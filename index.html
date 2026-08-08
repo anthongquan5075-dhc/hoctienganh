@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học Tiếng Anh Tự Động - Dịch, IPA & Từ Nguyên Mẫu</title>
+    <title>Học Tiếng Anh Tự Động - Dịch, IPA & Từ Biến Đổi</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -253,7 +253,7 @@
                 <tr>
                     <th style="width: 28%;">Câu gốc (Tiếng Anh)</th>
                     <th style="width: 28%;">Nghe & Phiên âm IPA</th>
-                    <th style="width: 24%;">Từ nguyên mẫu (Base Form)</th>
+                    <th style="width: 24%;">Từ biến đổi $\rightarrow$ Nguyên mẫu</th>
                     <th style="width: 20%;">Dịch nghĩa (Tiếng Việt)</th>
                 </tr>
             </thead>
@@ -264,7 +264,6 @@
 </div>
 
 <script>
-    // 1. FIX LỖI IPA MAPPING SAI TRONG TỪ ĐIỂN TĨNH
     const ipaDict = {
         "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
         "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
@@ -282,12 +281,7 @@
         "people": "ˈpiːpl̩", "sit": "sɪt", "laugh": "læf", "with": "wɪð", "our": "aʊər",
         "family": "ˈfæməli", "simple": "ˈsɪmpl", "but": "bət", "warm": "wɔːrm", "time": "taɪm",
         "love": "lʌv", "eating": "ˈiːtɪŋ", "now": "naʊ",
-        
-        // FIX CÁC TỪ MAPPING SAI TRƯỚC ĐÓ
-        "my": "maɪ",
-        "out": "aʊt",
-        "were": "wər",
-        "this": "ðɪs"
+        "my": "maɪ", "out": "aʊt", "were": "wər", "this": "ðɪs"
     };
 
     let currentSpeed = 0.9;
@@ -298,40 +292,42 @@
         document.getElementById("speedValue").textContent = val + "x";
     }
 
-    // 2. FIX THUẬT TOÁN LEMMATIZATION (Chỉ biến đổi từ thực sự có dạng biến thể)
-    function getLemma(word) {
+    // CHỈ LẤY TỪ NGUYÊN MẪU NẾU TỪ TRƯỚC ĐÓ THỰC SỰ BỊ BIẾN ĐỔI (Còn không sẽ trả về rỗng "")
+    function getLemmaIfModified(word) {
         let rawWord = word.trim();
         let w = rawWord.toLowerCase().replace(/[^a-z']/g, '');
-        if (!w) return rawWord;
+        if (!w) return "";
 
-        // Giữ nguyên đại từ và chỉ định từ tránh gượng ép
-        if (w === 'i') return 'I';
-        if (w === 'this' || w === 'that' || w === 'these' || w === 'those') return rawWord;
-        
-        // Giữ nguyên động từ to-be theo ngữ cảnh tự nhiên thay vì ép thành 'be' làm sai ngữ pháp
-        if (w === 'am' || w === 'is' || w === 'are' || w === 'was' || w === 'were') return rawWord;
+        // Chữ 'i' viết thường -> 'I'
+        if (rawWord === 'i') return 'I';
 
-        // Biến đổi động từ quá khứ quy tắc (-ed)
-        if (w.endsWith('ied')) return rawWord.slice(0, -3) + 'y'; // tried -> try
-        if (w.endsWith('ed') && w.length > 4) {
-            if (w.endsWith('ened')) return rawWord.slice(0, -2); // happened -> happen
-            if (w.endsWith('ded') || w.endsWith('ted')) return rawWord.slice(0, -1); // decided -> decide
-            if (w.endsWith('lled') || w.endsWith('pped')) return rawWord.slice(0, -3); // followed -> follow
-            return rawWord.slice(0, -2); // cooked -> cook
+        let lemma = "";
+
+        // Biến đổi quá khứ (-ed)
+        if (w.endsWith('ied')) {
+            lemma = rawWord.slice(0, -3) + 'y'; // tried -> try
+        } else if (w.endsWith('ed') && w.length > 4) {
+            if (w.endsWith('ened')) lemma = rawWord.slice(0, -2); // happened -> happen
+            else if (w.endsWith('ded') || w.endsWith('ted')) lemma = rawWord.slice(0, -1); // decided -> decide
+            else if (w.endsWith('lled') || w.endsWith('pped')) lemma = rawWord.slice(0, -3); // followed -> follow
+            else lemma = rawWord.slice(0, -2); // cooked -> cook
         }
 
-        // Biến đổi danh từ / động từ số nhiều (-s, -es)
-        if (w.endsWith('ies')) return rawWord.slice(0, -3) + 'y'; // families -> family
-        if (w.endsWith('es') && w.length > 3) {
-            if (w.endsWith('les')) return rawWord.slice(0, -1); // noodles -> noodle
-            if (w.endsWith('ches') || w.endsWith('shes') || w.endsWith('xes')) return rawWord.slice(0, -2);
-            return rawWord.slice(0, -1);
-        }
-        if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) {
-            return rawWord.slice(0, -1); // snacks -> snack, dumplings -> dumpling, steps -> step
+        // Biến đổi số nhiều (-s, -es)
+        else if (w.endsWith('ies')) {
+            lemma = rawWord.slice(0, -3) + 'y'; // families -> family
+        } else if (w.endsWith('es') && w.length > 3) {
+            if (w.endsWith('les')) lemma = rawWord.slice(0, -1); // noodles -> noodle
+            else if (w.endsWith('ches') || w.endsWith('shes') || w.endsWith('xes')) lemma = rawWord.slice(0, -2);
+            else lemma = rawWord.slice(0, -1);
+        } else if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) {
+            lemma = rawWord.slice(0, -1); // snacks -> snack, dumplings -> dumpling, steps -> step, parents -> parent
         }
 
-        return rawWord; // Giữ nguyên các từ gốc
+        // Nếu từ sau khi biến đổi trùng với từ ban đầu, coi như KHÔNG có biến đổi
+        if (lemma.toLowerCase() === w) return "";
+
+        return lemma ? `${rawWord} → ${lemma}` : "";
     }
 
     function loadVoices() {
@@ -374,7 +370,6 @@
         speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    // Tra cứu IPA thông minh
     async function fetchIpaOnline(word) {
         let cleanWord = word.toLowerCase().replace(/[^a-z']/g, '');
         if (!cleanWord) return word;
@@ -405,9 +400,11 @@
             return ipaResult;
         }
 
-        let lemma = getLemma(cleanWord).toLowerCase();
-        if (lemma !== cleanWord) {
-            let lemmaIpa = await queryApi(lemma);
+        // Nếu từ số nhiều/chia thì, thử tra theo từ nguyên mẫu
+        let modInfo = getLemmaIfModified(cleanWord);
+        if (modInfo) {
+            let lemmaOnly = modInfo.split(' → ')[1] || cleanWord;
+            let lemmaIpa = await queryApi(lemmaOnly);
             if (lemmaIpa) {
                 let suffix = cleanWord.endsWith('s') ? 'z' : (cleanWord.endsWith('ed') ? 'd' : '');
                 let finalIpa = lemmaIpa + suffix;
@@ -574,16 +571,17 @@
                 });
             });
 
-            // --- 3. Cột Từ Nguyên Mẫu (Base Form) ---
+            // --- 3. Cột Từ Biến Đổi -> Nguyên Mẫu (Chỉ hiển thị từ có biến đổi) ---
             const tdLemma = document.createElement("td");
             const lemmaContainer = document.createElement("div");
             lemmaContainer.className = "lemma-container";
             lemmaContainer.id = `lemma-row-${i}`;
 
             wordsWithPos.forEach((w, idx) => {
+                const modText = getLemmaIfModified(w.word);
                 const span = document.createElement("span");
                 span.className = "word-span";
-                span.textContent = getLemma(w.word) + " ";
+                span.textContent = modText ? (modText + " | ") : "";
                 span.dataset.index = idx;
                 lemmaContainer.appendChild(span);
             });
