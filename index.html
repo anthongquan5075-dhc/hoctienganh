@@ -1,4 +1,291 @@
-// Tải danh sách giọng đọc và TỰ ĐỘNG CHỌN giọng Anh - Mỹ (en-US)
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tiếng Anh Tự Động - Dịch & Phiên Âm IPA</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --highlight: #fef08a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 26px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .input-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            resize: vertical;
+            margin-bottom: 16px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .speed-control input[type=range] {
+            cursor: pointer;
+        }
+
+        .speed-value {
+            color: var(--primary);
+            font-weight: bold;
+            min-width: 40px;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            padding: 14px 16px;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            line-height: 1.6;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .audio-cell {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .btn-audio {
+            background-color: #e0f2fe;
+            color: #0284c7;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: transform 0.1s, background-color 0.2s;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .btn-audio:hover {
+            background-color: #bae6fd;
+            transform: scale(1.05);
+        }
+
+        .word-span {
+            display: inline-block;
+            padding: 0 2px;
+            border-radius: 4px;
+            transition: background-color 0.1s ease;
+        }
+
+        .word-span.active {
+            background-color: var(--highlight);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .english-text {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .ipa-container {
+            font-family: Arial, sans-serif;
+            color: #0284c7;
+            font-style: italic;
+        }
+
+        .vietnamese-text {
+            color: #334155;
+        }
+
+        .loading-text {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            th, td { padding: 10px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Ứng Dụng Học Tiếng Anh Tự Động</h1>
+    
+    <div class="input-section">
+        <textarea id="englishInput" placeholder="Nhập hoặc dán văn bản tiếng Anh vào đây..."></textarea>
+        
+        <div class="controls">
+            <!-- Chọn Giọng Đọc -->
+            <div class="setting-item">
+                <label for="voiceSelect">Giọng đọc:</label>
+                <select id="voiceSelect"></select>
+            </div>
+
+            <!-- Chọn Tốc Độ -->
+            <div class="setting-item speed-control">
+                <label for="speedRange">Tốc độ:</label>
+                <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1" value="0.9" oninput="updateSpeedLabel(this.value)">
+                <span id="speedValue" class="speed-value">0.9x</span>
+            </div>
+            
+            <button class="btn-submit" onclick="processText()">Phân Tích & Dịch Tự Động</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Câu gốc (Tiếng Anh)</th>
+                    <th style="width: 35%;">Nghe & Phiên âm IPA</th>
+                    <th style="width: 30%;">Dịch nghĩa (Tiếng Việt)</th>
+                </tr>
+            </thead>
+            <tbody id="lessonTableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const ipaDict = {
+        "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
+        "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
+        "dumplings": "ˈdʌmplɪŋz", "dumpling": "ˈdʌmplɪŋ", "very": "ˈvɛri", "popular": "ˈpɑːpjələr",
+        "in": "ɪn", "china": "ˈtʃaɪnə", "often": "ˈɔːfən", "eat": "iːt", "them": "ðəm",
+        "during": "ˈdʊrɪŋ", "festivals": "ˈfɛstəvəlz", "especially": "əˈspɛʃli", "the": "ðə",
+        "spring": "sprɪŋ", "festival": "ˈfɛstəvəl", "is": "ɪz", "a": "ə", "happy": "ˈhæpi",
+        "activity": "ækˈtɪvəti", "for": "fɔːr", "families": "ˈfæməliz", "it": "ɪt", "not": "nɑːt",
+        "difficult": "ˈdɪfəkəlt", "make": "meɪk", "first": "fɜːrst", "get": "ɡɛt", "some": "sʌm",
+        "filling": "ˈfɪlɪŋ", "middle": "ˈmɪdl̩", "of": "əv", "wrapper": "ˈræpər", "then": "ðɛn",
+        "fold": "foʊld", "press": "prɛs", "sides": "saɪdz", "together": "təˈɡɛðər", "after": "ˈæftər",
+        "that": "ðæt", "cook": "kʊk", "hot": "hɑːt", "water": "ˈwɔːtər", "when": "wɛn",
+        "they": "ðeɪ", "ready": "ˈrɛdi", "can": "kæn", "enjoy": "ɪnˈdʒɔɪ", "smell": "smɛl",
+        "good": "ɡʊd", "and": "ænd", "taste": "teɪst", "great": "ɡreɪt", "brings": "brɪŋz",
+        "people": "ˈpiːpl̩", "sit": "sɪt", "laugh": "læf", "with": "wɪð", "our": "aʊər",
+        "family": "ˈfæməli", "simple": "ˈsɪmpl", "but": "bət", "warm": "wɔːrm", "time": "taɪm",
+        "love": "lʌv", "eating": "ˈiːtɪŋ", "now": "naʊ"
+    };
+
+    let currentSpeed = 0.9;
+    let availableVoices = [];
+
+    function updateSpeedLabel(val) {
+        currentSpeed = parseFloat(val);
+        document.getElementById("speedValue").textContent = val + "x";
+    }
+
+    // Tải danh sách giọng đọc và TỰ ĐỘNG CHỌN giọng Anh - Mỹ (en-US)
     function loadVoices() {
         if ('speechSynthesis' in window) {
             const allVoices = speechSynthesis.getVoices();
@@ -42,3 +329,176 @@
             voiceSelect.selectedIndex = defaultUsIndex;
         }
     }
+
+    if ('speechSynthesis' in window) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    async function translateSentence(text) {
+        try {
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|vi`);
+            const data = await res.json();
+            if (data && data.responseData) {
+                return data.responseData.translatedText;
+            }
+            return "Không thể tải bản dịch";
+        } catch (e) {
+            return "Lỗi kết nối dịch";
+        }
+    }
+
+    function speakAndHighlight(sentenceIndex, text) {
+        if (!('speechSynthesis' in window)) {
+            alert("Trình duyệt không hỗ trợ đọc tự động.");
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = currentSpeed;
+
+        // Áp dụng giọng đọc được chọn
+        const selectedVoiceIdx = document.getElementById("voiceSelect").value;
+        if (availableVoices[selectedVoiceIdx]) {
+            utterance.voice = availableVoices[selectedVoiceIdx];
+        }
+
+        const enSpans = document.querySelectorAll(`#en-row-${sentenceIndex} .word-span`);
+        const ipaSpans = document.querySelectorAll(`#ipa-row-${sentenceIndex} .word-span`);
+
+        const removeHighlights = () => {
+            enSpans.forEach(s => s.classList.remove('active'));
+            ipaSpans.forEach(s => s.classList.remove('active'));
+        };
+
+        utterance.onboundary = (event) => {
+            if (event.name === 'word') {
+                const charIndex = event.charIndex;
+                let currentWordIdx = -1;
+
+                enSpans.forEach((span, idx) => {
+                    const start = parseInt(span.dataset.start);
+                    const end = parseInt(span.dataset.end);
+                    if (charIndex >= start && charIndex < end) {
+                        currentWordIdx = idx;
+                    }
+                });
+
+                removeHighlights();
+                if (currentWordIdx !== -1) {
+                    if (enSpans[currentWordIdx]) enSpans[currentWordIdx].classList.add('active');
+                    if (ipaSpans[currentWordIdx]) ipaSpans[currentWordIdx].classList.add('active');
+                }
+            }
+        };
+
+        utterance.onend = removeHighlights;
+        utterance.onerror = removeHighlights;
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    async function processText() {
+        const text = document.getElementById("englishInput").value.trim();
+        if (!text) {
+            alert("Vui lòng nhập đoạn văn tiếng Anh!");
+            return;
+        }
+
+        const tbody = document.getElementById("lessonTableBody");
+        tbody.innerHTML = "";
+
+        const rawSentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+        for (let i = 0; i < rawSentences.length; i++) {
+            const sentence = rawSentences[i].trim();
+            if (!sentence) continue;
+
+            const tr = document.createElement("tr");
+
+            const tdEn = document.createElement("td");
+            tdEn.className = "english-text";
+            tdEn.id = `en-row-${i}`;
+
+            const wordsWithPos = [];
+            const regex = /\b[a-zA-Z']+\b/g;
+            let match;
+            while ((match = regex.exec(sentence)) !== null) {
+                wordsWithPos.push({
+                    word: match[0],
+                    start: match.index,
+                    end: match.index + match[0].length
+                });
+            }
+
+            let lastIdx = 0;
+            let wordCount = 0;
+            wordsWithPos.forEach(w => {
+                if (w.start > lastIdx) {
+                    tdEn.appendChild(document.createTextNode(sentence.substring(lastIdx, w.start)));
+                }
+                const span = document.createElement("span");
+                span.className = "word-span";
+                span.textContent = w.word;
+                span.dataset.start = w.start;
+                span.dataset.end = w.end;
+                span.dataset.index = wordCount++;
+                tdEn.appendChild(span);
+                lastIdx = w.end;
+            });
+            if (lastIdx < sentence.length) {
+                tdEn.appendChild(document.createTextNode(sentence.substring(lastIdx)));
+            }
+
+            const tdAudio = document.createElement("td");
+            const audioDiv = document.createElement("div");
+            audioDiv.className = "audio-cell";
+
+            const btn = document.createElement("button");
+            btn.className = "btn-audio";
+            btn.innerHTML = "🔊";
+            btn.onclick = () => speakAndHighlight(i, sentence);
+
+            const ipaContainer = document.createElement("div");
+            ipaContainer.className = "ipa-container";
+            ipaContainer.id = `ipa-row-${i}`;
+
+            wordsWithPos.forEach((w, idx) => {
+                const ipaWord = ipaDict[w.word.toLowerCase()] || w.word.toLowerCase();
+                const span = document.createElement("span");
+                span.className = "word-span";
+                span.textContent = "/" + ipaWord + "/ ";
+                span.dataset.index = idx;
+                ipaContainer.appendChild(span);
+            });
+
+            audioDiv.appendChild(btn);
+            audioDiv.appendChild(ipaContainer);
+            tdAudio.appendChild(audioDiv);
+
+            const tdVi = document.createElement("td");
+            tdVi.className = "vietnamese-text loading-text";
+            tdVi.textContent = "Đang dịch tự động...";
+
+            tr.appendChild(tdEn);
+            tr.appendChild(tdAudio);
+            tr.appendChild(tdVi);
+            tbody.appendChild(tr);
+
+            translateSentence(sentence).then(translated => {
+                tdVi.textContent = translated;
+                tdVi.classList.remove("loading-text");
+            });
+        }
+    }
+
+    window.onload = () => {
+        loadVoices();
+        document.getElementById("englishInput").value = "Hello everyone, today we are going to talk about making dumplings. Dumplings are very popular in China.";
+        processText();
+    };
+</script>
+
+</body>
+</html>
