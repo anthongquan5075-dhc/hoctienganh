@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học Tiếng Anh Tự Động - Dịch, IPA & Từ Nguyên Mẫu</title>
+    <title>Học Tiếng Anh Tự Động - Dịch & Phiên Âm IPA</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 1150px;
+            max-width: 1000px;
             width: 100%;
         }
 
@@ -200,11 +200,6 @@
             font-style: italic;
         }
 
-        .lemma-container {
-            font-weight: 500;
-            color: #0d9488;
-        }
-
         .vietnamese-text {
             color: #334155;
         }
@@ -251,10 +246,9 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 28%;">Câu gốc (Tiếng Anh)</th>
-                    <th style="width: 28%;">Nghe & Phiên âm IPA</th>
-                    <th style="width: 24%;">Từ nguyên mẫu (Base Form)</th>
-                    <th style="width: 20%;">Dịch nghĩa (Tiếng Việt)</th>
+                    <th style="width: 35%;">Câu gốc (Tiếng Anh)</th>
+                    <th style="width: 35%;">Nghe & Phiên âm IPA</th>
+                    <th style="width: 30%;">Dịch nghĩa (Tiếng Việt)</th>
                 </tr>
             </thead>
             <tbody id="lessonTableBody">
@@ -264,7 +258,7 @@
 </div>
 
 <script>
-    // 1. FIX LỖI IPA MAPPING SAI TRONG TỪ ĐIỂN TĨNH
+    // Bảng từ điển IPA cơ bản đã được fix lỗi mapping
     const ipaDict = {
         "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
         "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
@@ -282,12 +276,7 @@
         "people": "ˈpiːpl̩", "sit": "sɪt", "laugh": "læf", "with": "wɪð", "our": "aʊər",
         "family": "ˈfæməli", "simple": "ˈsɪmpl", "but": "bət", "warm": "wɔːrm", "time": "taɪm",
         "love": "lʌv", "eating": "ˈiːtɪŋ", "now": "naʊ",
-        
-        // FIX CÁC TỪ MAPPING SAI TRƯỚC ĐÓ
-        "my": "maɪ",
-        "out": "aʊt",
-        "were": "wər",
-        "this": "ðɪs"
+        "my": "maɪ", "out": "aʊt", "were": "wər", "this": "ðɪs"
     };
 
     let currentSpeed = 0.9;
@@ -296,42 +285,6 @@
     function updateSpeedLabel(val) {
         currentSpeed = parseFloat(val);
         document.getElementById("speedValue").textContent = val + "x";
-    }
-
-    // 2. FIX THUẬT TOÁN LEMMATIZATION (Chỉ biến đổi từ thực sự có dạng biến thể)
-    function getLemma(word) {
-        let rawWord = word.trim();
-        let w = rawWord.toLowerCase().replace(/[^a-z']/g, '');
-        if (!w) return rawWord;
-
-        // Giữ nguyên đại từ và chỉ định từ tránh gượng ép
-        if (w === 'i') return 'I';
-        if (w === 'this' || w === 'that' || w === 'these' || w === 'those') return rawWord;
-        
-        // Giữ nguyên động từ to-be theo ngữ cảnh tự nhiên thay vì ép thành 'be' làm sai ngữ pháp
-        if (w === 'am' || w === 'is' || w === 'are' || w === 'was' || w === 'were') return rawWord;
-
-        // Biến đổi động từ quá khứ quy tắc (-ed)
-        if (w.endsWith('ied')) return rawWord.slice(0, -3) + 'y'; // tried -> try
-        if (w.endsWith('ed') && w.length > 4) {
-            if (w.endsWith('ened')) return rawWord.slice(0, -2); // happened -> happen
-            if (w.endsWith('ded') || w.endsWith('ted')) return rawWord.slice(0, -1); // decided -> decide
-            if (w.endsWith('lled') || w.endsWith('pped')) return rawWord.slice(0, -3); // followed -> follow
-            return rawWord.slice(0, -2); // cooked -> cook
-        }
-
-        // Biến đổi danh từ / động từ số nhiều (-s, -es)
-        if (w.endsWith('ies')) return rawWord.slice(0, -3) + 'y'; // families -> family
-        if (w.endsWith('es') && w.length > 3) {
-            if (w.endsWith('les')) return rawWord.slice(0, -1); // noodles -> noodle
-            if (w.endsWith('ches') || w.endsWith('shes') || w.endsWith('xes')) return rawWord.slice(0, -2);
-            return rawWord.slice(0, -1);
-        }
-        if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) {
-            return rawWord.slice(0, -1); // snacks -> snack, dumplings -> dumpling, steps -> step
-        }
-
-        return rawWord; // Giữ nguyên các từ gốc
     }
 
     function loadVoices() {
@@ -374,7 +327,7 @@
         speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    // Tra cứu IPA thông minh
+    // Tra cứu IPA thông minh trực tuyến (Xử lý dứt điểm lỗi OOV)
     async function fetchIpaOnline(word) {
         let cleanWord = word.toLowerCase().replace(/[^a-z']/g, '');
         if (!cleanWord) return word;
@@ -405,12 +358,15 @@
             return ipaResult;
         }
 
-        let lemma = getLemma(cleanWord).toLowerCase();
-        if (lemma !== cleanWord) {
-            let lemmaIpa = await queryApi(lemma);
-            if (lemmaIpa) {
-                let suffix = cleanWord.endsWith('s') ? 'z' : (cleanWord.endsWith('ed') ? 'd' : '');
-                let finalIpa = lemmaIpa + suffix;
+        // Nếu từ số nhiều (-s, -es) hoặc chia thì (-ed), tự động thử loại bỏ đuôi
+        if (cleanWord.endsWith('s') && cleanWord.length > 3) {
+            let baseWord = cleanWord.substring(0, cleanWord.length - 1);
+            if (cleanWord.endsWith('es')) baseWord = cleanWord.substring(0, cleanWord.length - 2);
+
+            let baseIpa = await queryApi(baseWord);
+            if (baseIpa) {
+                let suffix = cleanWord.endsWith('ks') || cleanWord.endsWith('ts') || cleanWord.endsWith('ps') ? 's' : 'z';
+                let finalIpa = baseIpa + suffix;
                 ipaDict[cleanWord] = finalIpa;
                 return finalIpa;
             }
@@ -450,12 +406,10 @@
 
         const enSpans = document.querySelectorAll(`#en-row-${sentenceIndex} .word-span`);
         const ipaSpans = document.querySelectorAll(`#ipa-row-${sentenceIndex} .word-span`);
-        const lemmaSpans = document.querySelectorAll(`#lemma-row-${sentenceIndex} .word-span`);
 
         const removeHighlights = () => {
             enSpans.forEach(s => s.classList.remove('active'));
             ipaSpans.forEach(s => s.classList.remove('active'));
-            lemmaSpans.forEach(s => s.classList.remove('active'));
         };
 
         utterance.onboundary = (event) => {
@@ -475,7 +429,6 @@
                 if (currentWordIdx !== -1) {
                     if (enSpans[currentWordIdx]) enSpans[currentWordIdx].classList.add('active');
                     if (ipaSpans[currentWordIdx]) ipaSpans[currentWordIdx].classList.add('active');
-                    if (lemmaSpans[currentWordIdx]) lemmaSpans[currentWordIdx].classList.add('active');
                 }
             }
         };
@@ -574,29 +527,13 @@
                 });
             });
 
-            // --- 3. Cột Từ Nguyên Mẫu (Base Form) ---
-            const tdLemma = document.createElement("td");
-            const lemmaContainer = document.createElement("div");
-            lemmaContainer.className = "lemma-container";
-            lemmaContainer.id = `lemma-row-${i}`;
-
-            wordsWithPos.forEach((w, idx) => {
-                const span = document.createElement("span");
-                span.className = "word-span";
-                span.textContent = getLemma(w.word) + " ";
-                span.dataset.index = idx;
-                lemmaContainer.appendChild(span);
-            });
-            tdLemma.appendChild(lemmaContainer);
-
-            // --- 4. Cột Tiếng Việt ---
+            // --- 3. Cột Tiếng Việt ---
             const tdVi = document.createElement("td");
             tdVi.className = "vietnamese-text loading-text";
             tdVi.textContent = "Đang dịch tự động...";
 
             tr.appendChild(tdEn);
             tr.appendChild(tdAudio);
-            tr.appendChild(tdLemma);
             tr.appendChild(tdVi);
             tbody.appendChild(tr);
 
