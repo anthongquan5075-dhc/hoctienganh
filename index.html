@@ -258,6 +258,7 @@
 </div>
 
 <script>
+    // Từ điển cơ bản tích hợp sẵn
     const ipaDict = {
         "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
         "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
@@ -285,10 +286,18 @@
         document.getElementById("speedValue").textContent = val + "x";
     }
 
-    // Tải danh sách giọng đọc tiếng Anh từ máy tính/điện thoại
+    // Tải danh sách giọng đọc và TỰ ĐỘNG CHỌN giọng Anh - Mỹ (en-US)
     function loadVoices() {
         if ('speechSynthesis' in window) {
-            availableVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en'));
+            const allVoices = speechSynthesis.getVoices();
+            
+            // Lọc ra các giọng Anh - Mỹ
+            availableVoices = allVoices.filter(voice => voice.lang === 'en-US' || voice.lang === 'en_US');
+
+            if (availableVoices.length === 0) {
+                availableVoices = allVoices.filter(voice => voice.lang.startsWith('en'));
+            }
+
             const voiceSelect = document.getElementById("voiceSelect");
             voiceSelect.innerHTML = "";
 
@@ -299,17 +308,56 @@
                 return;
             }
 
+            let defaultUsIndex = 0;
+
             availableVoices.forEach((voice, index) => {
                 const option = document.createElement("option");
                 option.value = index;
-                option.textContent = `${voice.name} (${voice.lang})`;
+                let isUS = voice.lang.includes('US') ? " [Anh-Mỹ]" : "";
+                option.textContent = `${voice.name}${isUS}`;
                 voiceSelect.appendChild(option);
+
+                if (voice.name.includes("US") || voice.name.includes("United States") || voice.name.includes("Natural")) {
+                    defaultUsIndex = index;
+                }
             });
+
+            voiceSelect.selectedIndex = defaultUsIndex;
         }
     }
 
     if ('speechSynthesis' in window) {
         speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // Tra cứu IPA trực tuyến đối với các từ thiếu/mới (Sửa lỗi OOV)
+    async function fetchIpaOnline(word) {
+        const cleanWord = word.toLowerCase().replace(/[^a-z']/g, '');
+        if (!cleanWord) return word;
+
+        if (ipaDict[cleanWord]) {
+            return ipaDict[cleanWord];
+        }
+
+        try {
+            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data[0] && data[0].phonetics) {
+                    for (let phonetic of data[0].phonetics) {
+                        if (phonetic.text) {
+                            const foundIpa = phonetic.text.replace(/\//g, '');
+                            ipaDict[cleanWord] = foundIpa; // Lưu cache
+                            return foundIpa;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`Không lấy được IPA cho từ: ${cleanWord}`);
+        }
+
+        return cleanWord; // Fallback an toàn nếu không tìm thấy
     }
 
     async function translateSentence(text) {
@@ -336,7 +384,6 @@
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = currentSpeed;
 
-        // Áp dụng giọng đọc được chọn
         const selectedVoiceIdx = document.getElementById("voiceSelect").value;
         if (availableVoices[selectedVoiceIdx]) {
             utterance.voice = availableVoices[selectedVoiceIdx];
@@ -395,6 +442,7 @@
 
             const tr = document.createElement("tr");
 
+            // Cột Tiếng Anh
             const tdEn = document.createElement("td");
             tdEn.className = "english-text";
             tdEn.id = `en-row-${i}`;
@@ -429,6 +477,7 @@
                 tdEn.appendChild(document.createTextNode(sentence.substring(lastIdx)));
             }
 
+            // Cột IPA & Nút đọc
             const tdAudio = document.createElement("td");
             const audioDiv = document.createElement("div");
             audioDiv.className = "audio-cell";
@@ -442,11 +491,11 @@
             ipaContainer.className = "ipa-container";
             ipaContainer.id = `ipa-row-${i}`;
 
+            // Tạo các phần tử hiển thị tạm thời
             wordsWithPos.forEach((w, idx) => {
-                const ipaWord = ipaDict[w.word.toLowerCase()] || w.word.toLowerCase();
                 const span = document.createElement("span");
                 span.className = "word-span";
-                span.textContent = "/" + ipaWord + "/ ";
+                span.textContent = "/.../ ";
                 span.dataset.index = idx;
                 ipaContainer.appendChild(span);
             });
@@ -455,6 +504,17 @@
             audioDiv.appendChild(ipaContainer);
             tdAudio.appendChild(audioDiv);
 
+            // Tra cứu IPA bất đồng bộ (tránh giật giao diện)
+            Promise.all(wordsWithPos.map(w => fetchIpaOnline(w.word))).then(ipaResults => {
+                const ipaSpans = ipaContainer.querySelectorAll('.word-span');
+                ipaResults.forEach((ipaVal, idx) => {
+                    if (ipaSpans[idx]) {
+                        ipaSpans[idx].textContent = "/" + ipaVal + "/ ";
+                    }
+                });
+            });
+
+            // Cột Tiếng Việt
             const tdVi = document.createElement("td");
             tdVi.className = "vietnamese-text loading-text";
             tdVi.textContent = "Đang dịch tự động...";
