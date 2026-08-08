@@ -264,7 +264,7 @@
 </div>
 
 <script>
-    // Bảng tra từ điển IPA cơ bản
+    // 1. FIX LỖI IPA MAPPING SAI TRONG TỪ ĐIỂN TĨNH
     const ipaDict = {
         "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
         "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
@@ -281,7 +281,13 @@
         "good": "ɡʊd", "and": "ænd", "taste": "teɪst", "great": "ɡreɪt", "brings": "brɪŋz",
         "people": "ˈpiːpl̩", "sit": "sɪt", "laugh": "læf", "with": "wɪð", "our": "aʊər",
         "family": "ˈfæməli", "simple": "ˈsɪmpl", "but": "bət", "warm": "wɔːrm", "time": "taɪm",
-        "love": "lʌv", "eating": "ˈiːtɪŋ", "now": "naʊ"
+        "love": "lʌv", "eating": "ˈiːtɪŋ", "now": "naʊ",
+        
+        // FIX CÁC TỪ MAPPING SAI TRƯỚC ĐÓ
+        "my": "maɪ",
+        "out": "aʊt",
+        "were": "wər",
+        "this": "ðɪs"
     };
 
     let currentSpeed = 0.9;
@@ -292,33 +298,40 @@
         document.getElementById("speedValue").textContent = val + "x";
     }
 
-    // Tự động tìm từ nguyên mẫu (Lemma)
+    // 2. FIX THUẬT TOÁN LEMMATIZATION (Chỉ biến đổi từ thực sự có dạng biến thể)
     function getLemma(word) {
-        let w = word.toLowerCase().replace(/[^a-z']/g, '');
-        if (!w) return word;
+        let rawWord = word.trim();
+        let w = rawWord.toLowerCase().replace(/[^a-z']/g, '');
+        if (!w) return rawWord;
 
+        // Giữ nguyên đại từ và chỉ định từ tránh gượng ép
         if (w === 'i') return 'I';
-        if (w === 'am' || w === 'is' || w === 'are' || w === 'was' || w === 'were') return 'be';
+        if (w === 'this' || w === 'that' || w === 'these' || w === 'those') return rawWord;
+        
+        // Giữ nguyên động từ to-be theo ngữ cảnh tự nhiên thay vì ép thành 'be' làm sai ngữ pháp
+        if (w === 'am' || w === 'is' || w === 'are' || w === 'was' || w === 'were') return rawWord;
 
-        // Biến đổi thì quá khứ (-ed)
-        if (w.endsWith('ied')) return w.slice(0, -3) + 'y'; // tried -> try
+        // Biến đổi động từ quá khứ quy tắc (-ed)
+        if (w.endsWith('ied')) return rawWord.slice(0, -3) + 'y'; // tried -> try
         if (w.endsWith('ed') && w.length > 4) {
-            if (w.endsWith('ened')) return w.slice(0, -2); // happened -> happen
-            if (w.endsWith('ded') || w.endsWith('ted')) return w.slice(0, -1); // decided -> decide
-            return w.slice(0, -2); // cooked -> cook
+            if (w.endsWith('ened')) return rawWord.slice(0, -2); // happened -> happen
+            if (w.endsWith('ded') || w.endsWith('ted')) return rawWord.slice(0, -1); // decided -> decide
+            if (w.endsWith('lled') || w.endsWith('pped')) return rawWord.slice(0, -3); // followed -> follow
+            return rawWord.slice(0, -2); // cooked -> cook
         }
 
-        // Biến đổi số nhiều (-s, -es)
-        if (w.endsWith('ies')) return w.slice(0, -3) + 'y'; // families -> family
+        // Biến đổi danh từ / động từ số nhiều (-s, -es)
+        if (w.endsWith('ies')) return rawWord.slice(0, -3) + 'y'; // families -> family
         if (w.endsWith('es') && w.length > 3) {
-            if (w.endsWith('les')) return w.slice(0, -1); // noodles -> noodle
-            return w.slice(0, -2);
+            if (w.endsWith('les')) return rawWord.slice(0, -1); // noodles -> noodle
+            if (w.endsWith('ches') || w.endsWith('shes') || w.endsWith('xes')) return rawWord.slice(0, -2);
+            return rawWord.slice(0, -1);
         }
         if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) {
-            return w.slice(0, -1); // snacks -> snack, dumplings -> dumpling
+            return rawWord.slice(0, -1); // snacks -> snack, dumplings -> dumpling, steps -> step
         }
 
-        return w;
+        return rawWord; // Giữ nguyên các từ gốc
     }
 
     function loadVoices() {
@@ -361,7 +374,7 @@
         speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    // Tra cứu IPA thông minh trực tuyến (Xử lý dứt điểm lỗi OOV)
+    // Tra cứu IPA thông minh
     async function fetchIpaOnline(word) {
         let cleanWord = word.toLowerCase().replace(/[^a-z']/g, '');
         if (!cleanWord) return word;
@@ -392,8 +405,7 @@
             return ipaResult;
         }
 
-        // Nếu từ số nhiều/chia thì, thử tra theo từ nguyên mẫu
-        let lemma = getLemma(cleanWord);
+        let lemma = getLemma(cleanWord).toLowerCase();
         if (lemma !== cleanWord) {
             let lemmaIpa = await queryApi(lemma);
             if (lemmaIpa) {
@@ -420,7 +432,6 @@
         }
     }
 
-    // Đọc voice và HIGHLIGHT đồng thời 3 cột
     function speakAndHighlight(sentenceIndex, text) {
         if (!('speechSynthesis' in window)) {
             alert("Trình duyệt không hỗ trợ đọc tự động.");
@@ -554,7 +565,6 @@
             audioDiv.appendChild(ipaContainer);
             tdAudio.appendChild(audioDiv);
 
-            // Tra cứu IPA bất đồng bộ
             Promise.all(wordsWithPos.map(w => fetchIpaOnline(w.word))).then(ipaResults => {
                 const ipaSpans = ipaContainer.querySelectorAll('.word-span');
                 ipaResults.forEach((ipaVal, idx) => {
@@ -599,7 +609,7 @@
 
     window.onload = () => {
         loadVoices();
-        document.getElementById("englishInput").value = "Hello everyone, today we are going to talk about the first time i tried to cook noodles by myself. I was hungry and decided to learn this simple skill instead of eating snacks.";
+        document.getElementById("englishInput").value = "Hello everyone, today we are going to talk about the first time i tried to cook noodles by myself. It happened last summer when my parents were out for the whole day. I was hungry and decided to learn this simple skill instead of eating snacks.";
         processText();
     };
 </script>
