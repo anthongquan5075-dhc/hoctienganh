@@ -71,7 +71,7 @@
             gap: 16px;
         }
 
-        .speed-control {
+        .setting-item {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -79,6 +79,15 @@
             padding: 8px 16px;
             border-radius: 8px;
             font-weight: 500;
+        }
+
+        select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
         }
 
         .speed-control input[type=range] {
@@ -216,8 +225,15 @@
         <textarea id="englishInput" placeholder="Nhập hoặc dán văn bản tiếng Anh vào đây..."></textarea>
         
         <div class="controls">
-            <div class="speed-control">
-                <label for="speedRange">Tốc độ đọc:</label>
+            <!-- Chọn Giọng Đọc -->
+            <div class="setting-item">
+                <label for="voiceSelect">Giọng đọc:</label>
+                <select id="voiceSelect"></select>
+            </div>
+
+            <!-- Chọn Tốc Độ -->
+            <div class="setting-item speed-control">
+                <label for="speedRange">Tốc độ:</label>
                 <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1" value="0.9" oninput="updateSpeedLabel(this.value)">
                 <span id="speedValue" class="speed-value">0.9x</span>
             </div>
@@ -242,7 +258,6 @@
 </div>
 
 <script>
-    // Từ điển IPA cơ bản tích hợp sẵn (Sẽ mở rộng động cho các từ thông dụng)
     const ipaDict = {
         "hello": "həˈloʊ", "everyone": "ˈɛvriˌwʌn", "today": "təˈdeɪ", "we": "wi", "are": "ɑːr",
         "going": "ˈɡoʊɪŋ", "to": "tə", "talk": "tɔːk", "about": "əˈbaʊt", "making": "ˈmeɪkɪŋ",
@@ -263,22 +278,40 @@
     };
 
     let currentSpeed = 0.9;
+    let availableVoices = [];
 
     function updateSpeedLabel(val) {
         currentSpeed = parseFloat(val);
         document.getElementById("speedValue").textContent = val + "x";
     }
 
-    // Tự động tạo phiên âm IPA từ từ điển
-    function getIpaForSentence(sentence) {
-        const words = sentence.match(/\b[a-zA-Z']+\b/g) || [];
-        return words.map(w => {
-            const cleanWord = w.toLowerCase();
-            return ipaDict[cleanWord] || cleanWord;
-        }).join(" ");
+    // Tải danh sách giọng đọc tiếng Anh từ máy tính/điện thoại
+    function loadVoices() {
+        if ('speechSynthesis' in window) {
+            availableVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en'));
+            const voiceSelect = document.getElementById("voiceSelect");
+            voiceSelect.innerHTML = "";
+
+            if (availableVoices.length === 0) {
+                const option = document.createElement("option");
+                option.textContent = "Giọng mặc định (Default)";
+                voiceSelect.appendChild(option);
+                return;
+            }
+
+            availableVoices.forEach((voice, index) => {
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+        }
     }
 
-    // Tự động dịch câu qua API MyMemory
+    if ('speechSynthesis' in window) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     async function translateSentence(text) {
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|vi`);
@@ -292,7 +325,6 @@
         }
     }
 
-    // Đọc và highlight từ đang đọc
     function speakAndHighlight(sentenceIndex, text) {
         if (!('speechSynthesis' in window)) {
             alert("Trình duyệt không hỗ trợ đọc tự động.");
@@ -302,8 +334,13 @@
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
         utterance.rate = currentSpeed;
+
+        // Áp dụng giọng đọc được chọn
+        const selectedVoiceIdx = document.getElementById("voiceSelect").value;
+        if (availableVoices[selectedVoiceIdx]) {
+            utterance.voice = availableVoices[selectedVoiceIdx];
+        }
 
         const enSpans = document.querySelectorAll(`#en-row-${sentenceIndex} .word-span`);
         const ipaSpans = document.querySelectorAll(`#ipa-row-${sentenceIndex} .word-span`);
@@ -313,7 +350,6 @@
             ipaSpans.forEach(s => s.classList.remove('active'));
         };
 
-        // Bắt sự kiện đọc tới từ nào thì highlight từ đó
         utterance.onboundary = (event) => {
             if (event.name === 'word') {
                 const charIndex = event.charIndex;
@@ -351,7 +387,6 @@
         const tbody = document.getElementById("lessonTableBody");
         tbody.innerHTML = "";
 
-        // Tách câu dựa trên dấu chấm, hỏi, cảm thán
         const rawSentences = text.match(/[^.!?]+[.!?]+/g) || [text];
 
         for (let i = 0; i < rawSentences.length; i++) {
@@ -360,7 +395,6 @@
 
             const tr = document.createElement("tr");
 
-            // --- 1. Tạo cột Tiếng Anh (Có Span cho từng từ để Highlight) ---
             const tdEn = document.createElement("td");
             tdEn.className = "english-text";
             tdEn.id = `en-row-${i}`;
@@ -379,7 +413,6 @@
             let lastIdx = 0;
             let wordCount = 0;
             wordsWithPos.forEach(w => {
-                // Thêm khoảng trắng / dấu câu giữa các từ
                 if (w.start > lastIdx) {
                     tdEn.appendChild(document.createTextNode(sentence.substring(lastIdx, w.start)));
                 }
@@ -396,7 +429,6 @@
                 tdEn.appendChild(document.createTextNode(sentence.substring(lastIdx)));
             }
 
-            // --- 2. Tạo cột IPA & Nút đọc ---
             const tdAudio = document.createElement("td");
             const audioDiv = document.createElement("div");
             audioDiv.className = "audio-cell";
@@ -410,7 +442,6 @@
             ipaContainer.className = "ipa-container";
             ipaContainer.id = `ipa-row-${i}`;
 
-            // Ghép IPA cho từng từ tương ứng
             wordsWithPos.forEach((w, idx) => {
                 const ipaWord = ipaDict[w.word.toLowerCase()] || w.word.toLowerCase();
                 const span = document.createElement("span");
@@ -424,7 +455,6 @@
             audioDiv.appendChild(ipaContainer);
             tdAudio.appendChild(audioDiv);
 
-            // --- 3. Tạo cột Tiếng Việt (Dịch tự động) ---
             const tdVi = document.createElement("td");
             tdVi.className = "vietnamese-text loading-text";
             tdVi.textContent = "Đang dịch tự động...";
@@ -434,7 +464,6 @@
             tr.appendChild(tdVi);
             tbody.appendChild(tr);
 
-            // Gọi API dịch ngầm
             translateSentence(sentence).then(translated => {
                 tdVi.textContent = translated;
                 tdVi.classList.remove("loading-text");
@@ -442,8 +471,8 @@
         }
     }
 
-    // Khởi tạo mẫu khi mở ứng dụng
     window.onload = () => {
+        loadVoices();
         document.getElementById("englishInput").value = "Hello everyone, today we are going to talk about making dumplings. Dumplings are very popular in China.";
         processText();
     };
