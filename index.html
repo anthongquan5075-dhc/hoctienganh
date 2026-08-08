@@ -285,19 +285,10 @@
         document.getElementById("speedValue").textContent = val + "x";
     }
 
-    // Tải danh sách giọng đọc và TỰ ĐỘNG CHỌN giọng Anh - Mỹ (en-US)
+    // Tải danh sách giọng đọc tiếng Anh từ máy tính/điện thoại
     function loadVoices() {
         if ('speechSynthesis' in window) {
-            const allVoices = speechSynthesis.getVoices();
-            
-            // Lọc ra danh sách các giọng Anh - Mỹ
-            availableVoices = allVoices.filter(voice => voice.lang === 'en-US' || voice.lang === 'en_US');
-
-            // Nếu không tìm thấy giọng en-US riêng biệt, mở rộng ra các giọng tiếng Anh khác (en-GB, en-AU...)
-            if (availableVoices.length === 0) {
-                availableVoices = allVoices.filter(voice => voice.lang.startsWith('en'));
-            }
-
+            availableVoices = speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en'));
             const voiceSelect = document.getElementById("voiceSelect");
             voiceSelect.innerHTML = "";
 
@@ -308,25 +299,12 @@
                 return;
             }
 
-            let defaultUsIndex = 0;
-
             availableVoices.forEach((voice, index) => {
                 const option = document.createElement("option");
                 option.value = index;
-                
-                // Hiển thị tên giọng rõ ràng kèm nhãn Anh-Mỹ
-                let isUS = voice.lang.includes('US') ? " [Anh-Mỹ]" : "";
-                option.textContent = `${voice.name}${isUS}`;
+                option.textContent = `${voice.name} (${voice.lang})`;
                 voiceSelect.appendChild(option);
-
-                // Ưu tiên chọn tự động giọng tự nhiên của Mỹ (Google/Microsoft/Apple US)
-                if (voice.name.includes("US") || voice.name.includes("United States") || voice.name.includes("Natural")) {
-                    defaultUsIndex = index;
-                }
             });
-
-            // Tự động chọn giọng Anh - Mỹ hàng đầu
-            voiceSelect.selectedIndex = defaultUsIndex;
         }
     }
 
